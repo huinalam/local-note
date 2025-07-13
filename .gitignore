@@ -21,3 +21,5 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+dev-dist/sw.js
+dev-dist/workbox-56016e7a.js
