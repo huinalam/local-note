@@ -91,4 +91,15 @@ export default defineConfig({
       },
     }),
   ],
+  resolve: process.env.VITEST
+    ? {
+        conditions: ["browser"],
+      }
+    : undefined,
+  test: {
+    globals: true,
+    environment: "jsdom",
+    setupFiles: ["src/lib/__tests__/setup.ts"],
+    include: ["src/**/*.{test,spec}.{js,ts}"],
+  },
 });
