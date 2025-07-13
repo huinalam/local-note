@@ -1,7 +1,7 @@
 <script lang="ts">
   import '../app.css';
   import { onMount } from 'svelte';
-  import { browser } from '$app/environment';
+  import { browser, dev } from '$app/environment';
   
   let showUpdatePrompt = false;
   let updateServiceWorker: (() => void) | null = null;
@@ -78,6 +78,12 @@
     }
   }
 </script>
+
+<svelte:head>
+  {#if (!dev && browser)}
+    <link rel="manifest" href="/manifest.webmanifest">
+  {/if}
+</svelte:head>
 
 {#if showInstallPrompt}
   <div class="install-prompt">
