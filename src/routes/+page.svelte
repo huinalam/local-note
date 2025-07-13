@@ -3,42 +3,48 @@
   import { browser } from '$app/environment';
   import PWAStatus from '$lib/PWAStatus.svelte';
   
+  interface BeforeInstallPromptEvent extends Event {
+    prompt: () => Promise<void>;
+    userChoice: Promise<{ outcome: string }>;
+  }
+  
   let title = 'Local Note';
   let message = 'Hello World!';
-  let deferredPrompt: any = null;
-  let showInstallButton = false;
+  let deferredPrompt: BeforeInstallPromptEvent | null = null;
+  export let showInstallButton = false;
+
+  if (browser && typeof window !== 'undefined') {
+    window.addEventListener(
+      'beforeinstallprompt',
+      (e: Event) => {
+        const bipEvent = e as BeforeInstallPromptEvent;
+        bipEvent.preventDefault();
+        deferredPrompt = bipEvent;
+        showInstallButton = true;
+      },
+      { once: true } as AddEventListenerOptions
+    );
+  }
 
   onMount(() => {
     if (browser) {
-      // PWA 설치 프롬프트 이벤트 리스너
-      window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        showInstallButton = true;
-      });
-
-      // 앱이 이미 설치되었는지 확인
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        showInstallButton = false;
+      }
       window.addEventListener('appinstalled', () => {
         showInstallButton = false;
         deferredPrompt = null;
       });
-
-      // 이미 설치된 앱인지 확인 (standalone 모드)
-      if (window.matchMedia('(display-mode: standalone)').matches) {
-        showInstallButton = false;
-      }
     }
   });
 
   async function handleInstallClick() {
     if (deferredPrompt) {
-      deferredPrompt.prompt();
+      await deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
-      
       if (outcome === 'accepted') {
         showInstallButton = false;
       }
-      
       deferredPrompt = null;
     }
   }

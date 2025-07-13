@@ -9,6 +9,8 @@
   onMount(async () => {
     if (browser) {
       // PWA 업데이트 확인
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
       const { registerSW } = await import('virtual:pwa-register');
       
       const updateSW = registerSW({
@@ -21,10 +23,10 @@
         onOfflineReady() {
           console.log('앱이 오프라인에서 사용할 준비가 되었습니다.');
         },
-        onRegistered(r) {
+        onRegistered(r: ServiceWorkerRegistration | undefined) {
           console.log('Service Worker가 등록되었습니다:', r);
         },
-        onRegisterError(error) {
+        onRegisterError(error: unknown) {
           console.error('Service Worker 등록 실패:', error);
         }
       });
