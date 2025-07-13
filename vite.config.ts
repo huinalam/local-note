@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [
     sveltekit(),
     SvelteKitPWA({
+      includeAssets: ["favicon.svg", "icon-192.png", "icon-512.png"],
       strategies: "generateSW",
       registerType: "autoUpdate",
       workbox: {
