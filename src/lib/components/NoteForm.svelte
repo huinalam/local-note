@@ -1,10 +1,12 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import NoteList from './NoteList.svelte';
   import NoteEditor from './NoteEditor.svelte';
   import { NoteService } from '../services/noteService';
   import { AutoSaveService } from '../services/autoSaveService';
   import { NoteDatabase } from '../database/NoteDatabase';
+  import { ShortcutManager } from '../services/ShortcutManager';
+  import { DefaultShortcuts } from '../services/DefaultShortcuts';
   import type { Note } from '../database/types';
 
   let notes: Note[] = [];
@@ -14,6 +16,10 @@
   const db = new NoteDatabase();
   const noteService = new NoteService(db);
   const autoSaveService = new AutoSaveService(noteService);
+  
+  // 단축키 시스템 초기화
+  let shortcutManager: ShortcutManager;
+  let defaultShortcuts: DefaultShortcuts;
 
   function createEmptyNote(): Note {
     return {
@@ -85,9 +91,41 @@
   onMount(() => {
     loadNotes();
     
+    // 단축키 시스템 초기화
+    try {
+      shortcutManager = new ShortcutManager();
+      defaultShortcuts = new DefaultShortcuts(shortcutManager);
+      
+      // 기본 단축키와 액션을 등록 (서비스와 함께)
+      defaultShortcuts.registerAll(noteService, autoSaveService);
+      
+      console.log('단축키 시스템이 초기화되었습니다');
+    } catch (error) {
+      console.error('단축키 시스템 초기화 실패:', error);
+    }
+    
     return () => {
       autoSaveService.destroy();
     };
+  });
+
+  onDestroy(() => {
+    // 단축키 시스템 정리
+    if (defaultShortcuts) {
+      try {
+        defaultShortcuts.unregisterAll();
+      } catch (error) {
+        console.error('단축키 해제 실패:', error);
+      }
+    }
+    
+    if (shortcutManager) {
+      try {
+        shortcutManager.destroy();
+      } catch (error) {
+        console.error('단축키 매니저 정리 실패:', error);
+      }
+    }
   });
 </script>
 
@@ -107,27 +145,6 @@
   </aside>
 
   <main class="editor-area">
-    <div class="editor-header">
-      <div class="save-status">
-        {#if saveStatus === 'saving'}
-          <span class="status saving">
-            <span class="spinner"></span>
-            저장 중...
-          </span>
-        {:else if saveStatus === 'saved'}
-          <span class="status saved">
-            <span class="check-icon">✓</span>
-            저장됨
-          </span>
-        {:else if saveStatus === 'error'}
-          <span class="status error">
-            <span class="error-icon">⚠</span>
-            저장 실패
-          </span>
-        {/if}
-      </div>
-    </div>
-    
     <div class="editor-container">
       <NoteEditor note={currentNote} onChange={handleNoteChange} />
     </div>

@@ -54,11 +54,11 @@ describe("NoteForm", () => {
     );
   });
 
-  test("should display save status area", () => {
+  test("should display main editor area", () => {
     const { container } = render(NoteForm);
 
-    // Should have save status container
-    const saveStatus = container.querySelector(".save-status");
-    expect(saveStatus).toBeInTheDocument();
+    // Should have main editor area
+    const editorArea = container.querySelector(".editor-area");
+    expect(editorArea).toBeInTheDocument();
   });
 });
