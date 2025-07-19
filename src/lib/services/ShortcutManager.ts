@@ -55,6 +55,13 @@ export class ShortcutManager {
   }
 
   /**
+   * 모든 단축키를 조회합니다
+   */
+  getAllShortcuts(): Shortcut[] {
+    return this.shortcutRegistry.getAll();
+  }
+
+  /**
    * 단축키를 해제합니다
    */
   unregisterShortcut(shortcutId: string): boolean {

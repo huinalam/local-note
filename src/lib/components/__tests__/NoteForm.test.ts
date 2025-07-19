@@ -63,4 +63,39 @@ describe("NoteForm", () => {
     const editorArea = container.querySelector(".editor-area");
     expect(editorArea).toBeInTheDocument();
   });
+
+  test("should render help button in sidebar", () => {
+    const { getByRole } = render(NoteForm);
+
+    // Should show help button
+    const helpButton = getByRole("button", { name: /도움말/ });
+    expect(helpButton).toBeInTheDocument();
+  });
+
+  test("should open shortcut help modal when help button is clicked", async () => {
+    const { getByRole, queryByTestId } = render(NoteForm);
+
+    // Help modal should not be visible initially
+    expect(queryByTestId("shortcut-help-modal")).not.toBeInTheDocument();
+
+    // Click help button
+    const helpButton = getByRole("button", { name: /도움말/ });
+    await fireEvent.click(helpButton);
+
+    // Help modal should be visible
+    expect(queryByTestId("shortcut-help-modal")).toBeInTheDocument();
+  });
+
+  test("should open shortcut help modal when F1 key is pressed", async () => {
+    const { queryByTestId } = render(NoteForm);
+
+    // Help modal should not be visible initially
+    expect(queryByTestId("shortcut-help-modal")).not.toBeInTheDocument();
+
+    // Press F1 key
+    await fireEvent.keyDown(document, { key: "F1" });
+
+    // Help modal should be visible
+    expect(queryByTestId("shortcut-help-modal")).toBeInTheDocument();
+  });
 });

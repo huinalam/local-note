@@ -11,13 +11,22 @@
   import { ConfirmDialogService, confirmDialogStore } from '../services/confirmDialogService';
   import { createNoteNavigationActions } from '../actions/noteNavigationActions';
   import { createSearchActions } from '../actions/searchActions';
+  import { createShortcutHelpActions } from '../actions/shortcutHelpActions';
+  import { uiActions } from '../actions/uiActions';
   import SearchModal from './SearchModal.svelte';
+  import ShortcutHelpModal from './ShortcutHelpModal.svelte';
+  import { isSidebarCollapsed, toggleSidebar } from '../stores/uiStore';
+  import { shortcutHelpStore } from '../stores/shortcutHelpStore';
+  import { ShortcutHelpService } from '../services/ShortcutHelpService';
   import type { Note } from '../database/types';
 
   let notes: Note[] = [];
   let currentNote: Note = createEmptyNote();
   let saveStatus: 'idle' | 'saving' | 'saved' | 'error' = 'idle';
   let isSearchModalOpen = false;
+  
+  // 단축키 도움말 관련
+  let shortcutHelpService: ShortcutHelpService;
   
   const db = new NoteDatabase();
   const noteService = new NoteService(db);
@@ -200,6 +209,38 @@
     isSearchModalOpen = false;
   }
 
+  function openShortcutHelp() {
+    // 단축키 데이터 수집
+    const appShortcuts = shortcutManager.getAllShortcuts();
+    
+    // EasyMDE 단축키도 가져오기 (SimpleMDEEditor에서)
+    const easyMDEShortcuts = {
+      toggleBold: 'Cmd-B',
+      toggleItalic: 'Cmd-I',
+      drawLink: 'Cmd-K',
+      toggleBlockquote: "Cmd-'",
+      toggleHeadingSmaller: 'Cmd-H',
+      toggleUnorderedList: 'Cmd-L',
+      toggleOrderedList: 'Cmd-Alt-L',
+      drawTable: 'Cmd-Alt-T',
+      drawHorizontalRule: 'Cmd-R',
+      drawImage: 'Cmd-Alt-I',
+      toggleCodeBlock: 'Cmd-Alt-C',
+      togglePreview: 'Cmd-P',
+    };
+    
+    // 단축키 데이터 변환
+    const editorShortcuts = shortcutHelpService.convertEasyMDEShortcuts(easyMDEShortcuts);
+    const helpData = shortcutHelpService.getShortcutsByCategory(editorShortcuts);
+    
+    // 도움말 모달 열기
+    shortcutHelpStore.open(helpData);
+  }
+
+  function closeShortcutHelp() {
+    shortcutHelpStore.close();
+  }
+
   function handleNoteSelectFromSearch(note: Note) {
     currentNote = note;
     closeSearchModal();
@@ -212,6 +253,7 @@
     try {
       shortcutManager = new ShortcutManager();
       defaultShortcuts = new DefaultShortcuts(shortcutManager);
+      shortcutHelpService = new ShortcutHelpService(shortcutManager);
       
       // 기본 단축키와 액션을 등록 (서비스와 함께)
       defaultShortcuts.registerAll(
@@ -233,6 +275,13 @@
       // 검색 액션 등록
       const searchActions = createSearchActions(openSearchModal);
       shortcutManager.registerAction(searchActions.openSearchModal);
+      
+      // 도움말 액션 등록
+      const helpActions = createShortcutHelpActions(openShortcutHelp);
+      shortcutManager.registerAction(helpActions.openShortcutHelp);
+      
+      // 사이드바 토글 액션 등록
+      // shortcutManager.registerAction(uiActions.toggleSidebar); // TODO: uiActions 형식 수정 필요
       
       // 메모 번호 이동 단축키 등록
       shortcutManager.registerAction(noteNavigationActions.goToNote1);
@@ -276,13 +325,38 @@
 </script>
 
 <div class="note-app">
-  <aside class="sidebar">
+  <aside class="sidebar" class:sidebar--collapsed={$isSidebarCollapsed}>
     <div class="sidebar-header">
-      <h1 class="app-title">📝 Local Note</h1>
-      <button class="new-note-btn" on:click={handleNewNote}>
-        <span class="icon">+</span>
-        새 메모
-      </button>
+      <div class="sidebar-header-top">
+        <h1 class="app-title">📝 Local Note</h1>
+        <button 
+          class="sidebar-toggle-btn" 
+          on:click={toggleSidebar}
+          aria-label={$isSidebarCollapsed ? '사이드바 보이기' : '사이드바 숨기기'}
+          title={$isSidebarCollapsed ? '사이드바 보이기' : '사이드바 숨기기'}
+        >
+          {#if $isSidebarCollapsed}
+            <span class="icon">▶</span>
+          {:else}
+            <span class="icon">◀</span>
+          {/if}
+        </button>
+      </div>
+      <div class="sidebar-buttons">
+        <button class="new-note-btn" on:click={handleNewNote}>
+          <span class="icon">+</span>
+          새 메모
+        </button>
+        <button 
+          class="help-btn" 
+          on:click={openShortcutHelp}
+          aria-label="단축키 도움말 (F1)"
+          title="단축키 도움말 (F1)"
+        >
+          <span class="icon">?</span>
+          도움말
+        </button>
+      </div>
     </div>
     
     <div class="note-list-container">
@@ -297,6 +371,18 @@
   </aside>
 
   <main class="editor-area">
+    <!-- 사이드바 숨김 상태에서 표시되는 플로팅 토글 버튼 -->
+    {#if $isSidebarCollapsed}
+      <button 
+        class="floating-sidebar-toggle" 
+        on:click={toggleSidebar}
+        aria-label="사이드바 보이기"
+        title="사이드바 보이기"
+      >
+        <span class="icon">▶</span>
+      </button>
+    {/if}
+    
     <div class="editor-container">
       <SimpleMDEEditor note={currentNote} onChange={handleNoteChange} />
     </div>
@@ -325,6 +411,13 @@
   notes={notes}
 />
 
+<!-- 단축키 도움말 모달 -->
+<ShortcutHelpModal 
+  isOpen={$shortcutHelpStore.isOpen}
+  onClose={closeShortcutHelp}
+  shortcutData={$shortcutHelpStore.shortcutData}
+/>
+
 <style>
   .note-app {
     display: flex;
@@ -339,6 +432,13 @@
     border-right: 1px solid var(--color-border-primary);
     display: flex;
     flex-direction: column;
+    transition: width 0.3s ease-in-out;
+  }
+
+  .sidebar--collapsed {
+    width: 0;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .sidebar-header {
@@ -346,12 +446,85 @@
     border-bottom: 1px solid var(--color-border-secondary);
   }
 
+  .sidebar-header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-4);
+  }
+
+  .sidebar-toggle-btn {
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 0.375rem;
+    padding: var(--space-1) var(--space-2);
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 2rem;
+  }
+
+  .sidebar-toggle-btn:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+    border-color: var(--color-border-primary);
+  }
+
+  .sidebar-toggle-btn:focus {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+
+  .floating-sidebar-toggle {
+    position: fixed;
+    top: var(--space-4);
+    left: var(--space-4);
+    z-index: 1000;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 0.5rem;
+    padding: var(--space-3);
+    cursor: pointer;
+    color: var(--color-text-primary);
+    font-size: var(--font-size-lg);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 3rem;
+    height: 3rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(8px);
+  }
+
+  .floating-sidebar-toggle:hover {
+    background: var(--color-bg-hover);
+    border-color: var(--color-border-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  }
+
+  .floating-sidebar-toggle:focus {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+
+  .floating-sidebar-toggle:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
   .app-title {
     font-size: var(--font-size-xl);
     font-weight: var(--font-weight-bold);
     color: var(--color-text-primary);
-    margin: 0 0 var(--space-4) 0;
-    text-align: center;
+    margin: 0;
+    flex: 1;
   }
 
   .new-note-btn {
@@ -383,6 +556,47 @@
     outline-offset: 2px;
   }
 
+  .sidebar-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .help-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 0.375rem;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: var(--font-family-sans);
+  }
+
+  .help-btn:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+    border-color: var(--color-border-primary);
+    transform: translateY(-1px);
+  }
+
+  .help-btn:focus {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+
+  .help-btn .icon {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-bold);
+  }
+
   .icon {
     font-size: var(--font-size-lg);
     font-weight: var(--font-weight-bold);
@@ -398,6 +612,7 @@
     display: flex;
     flex-direction: column;
     background: var(--color-bg-primary);
+    transition: flex-basis 0.3s ease-in-out;
   }
 
   .editor-container {

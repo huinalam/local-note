@@ -207,6 +207,18 @@ export class DefaultShortcuts {
         enabled: true,
         priority: 10,
       },
+
+      // 도움말 단축키
+      {
+        id: "default.help.openShortcutHelp",
+        keys: "f1",
+        action: "help.openShortcutHelp",
+        context: ShortcutContext.GLOBAL,
+        description: "단축키 도움말을 엽니다",
+        category: "help",
+        enabled: true,
+        priority: 10,
+      },
     ];
   }
 
