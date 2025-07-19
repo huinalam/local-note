@@ -18,7 +18,9 @@ describe("NoteForm", () => {
     expect(getByRole("button", { name: /새 메모/ })).toBeInTheDocument();
 
     // Should show editor area
-    expect(getByRole("textbox", { name: /메모 내용/ })).toBeInTheDocument();
+    expect(
+      getByRole("textbox", { name: /마크다운 에디터/ })
+    ).toBeInTheDocument();
 
     // Should show empty state
     expect(getByText(/아직 메모가 없습니다/)).toBeInTheDocument();
@@ -31,14 +33,14 @@ describe("NoteForm", () => {
     await fireEvent.click(newNoteButton);
 
     // Should clear the editor
-    const contentTextarea = getByRole("textbox", { name: /메모 내용/ });
+    const contentTextarea = getByRole("textbox", { name: /마크다운 에디터/ });
     expect(contentTextarea).toHaveValue("");
   });
 
   test("should save note when typing", async () => {
     const { getByRole } = render(NoteForm);
 
-    const contentTextarea = getByRole("textbox", { name: /메모 내용/ });
+    const contentTextarea = getByRole("textbox", { name: /마크다운 에디터/ });
 
     // 입력 이벤트를 발생시킵니다
     await fireEvent.input(contentTextarea, {
@@ -50,7 +52,7 @@ describe("NoteForm", () => {
     expect(contentTextarea).toBeInTheDocument();
     expect(contentTextarea).toHaveAttribute(
       "placeholder",
-      "메모를 입력하세요..."
+      "마크다운으로 메모를 작성하세요..."
     );
   });
 

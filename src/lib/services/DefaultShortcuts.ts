@@ -1,7 +1,8 @@
-import type { ShortcutManager } from "./ShortcutManager";
-import { createFileActions } from "../actions/fileActions";
-import { createTabActions } from "../actions/tabActions";
+import { ShortcutManager } from "./ShortcutManager";
 import { ShortcutContext, type Shortcut } from "../types/shortcut";
+import { createFileActions } from "../actions/fileActions";
+import { createNoteNavigationActions } from "../actions/noteNavigationActions";
+import { createDeleteActions } from "../actions/deleteActions";
 import type { NoteService } from "./noteService";
 import type { AutoSaveService } from "./autoSaveService";
 
@@ -60,54 +61,137 @@ export class DefaultShortcuts {
         enabled: true,
         priority: 10,
       },
-      // 탭 관리 단축키
+
+      // 메모 네비게이션 단축키
       {
-        id: "default.tab.new",
-        keys: "ctrl+t",
-        action: "tab.new",
+        id: "default.note.goTo1",
+        keys: "ctrl+1",
+        action: "note.goTo1",
         context: ShortcutContext.GLOBAL,
-        description: "새로운 탭을 생성합니다",
-        category: "tab",
+        description: "1번째 메모로 이동합니다",
+        category: "note",
         enabled: true,
         priority: 10,
       },
       {
-        id: "default.tab.close",
-        keys: "ctrl+w",
-        action: "tab.close",
+        id: "default.note.goTo2",
+        keys: "ctrl+2",
+        action: "note.goTo2",
         context: ShortcutContext.GLOBAL,
-        description: "현재 탭을 닫습니다",
-        category: "tab",
+        description: "2번째 메모로 이동합니다",
+        category: "note",
         enabled: true,
         priority: 10,
       },
       {
-        id: "default.tab.next",
-        keys: "ctrl+tab",
-        action: "tab.next",
+        id: "default.note.goTo3",
+        keys: "ctrl+3",
+        action: "note.goTo3",
         context: ShortcutContext.GLOBAL,
-        description: "다음 탭으로 이동합니다",
-        category: "tab",
+        description: "3번째 메모로 이동합니다",
+        category: "note",
         enabled: true,
         priority: 10,
       },
       {
-        id: "default.tab.prev",
-        keys: "ctrl+shift+tab",
-        action: "tab.prev",
+        id: "default.note.goTo4",
+        keys: "ctrl+4",
+        action: "note.goTo4",
         context: ShortcutContext.GLOBAL,
-        description: "이전 탭으로 이동합니다",
-        category: "tab",
+        description: "4번째 메모로 이동합니다",
+        category: "note",
         enabled: true,
         priority: 10,
       },
       {
-        id: "default.tab.search",
-        keys: "ctrl+p",
-        action: "tab.search",
+        id: "default.note.goTo5",
+        keys: "ctrl+5",
+        action: "note.goTo5",
         context: ShortcutContext.GLOBAL,
-        description: "탭을 검색합니다",
-        category: "tab",
+        description: "5번째 메모로 이동합니다",
+        category: "note",
+        enabled: true,
+        priority: 10,
+      },
+      {
+        id: "default.note.goTo6",
+        keys: "ctrl+6",
+        action: "note.goTo6",
+        context: ShortcutContext.GLOBAL,
+        description: "6번째 메모로 이동합니다",
+        category: "note",
+        enabled: true,
+        priority: 10,
+      },
+      {
+        id: "default.note.goTo7",
+        keys: "ctrl+7",
+        action: "note.goTo7",
+        context: ShortcutContext.GLOBAL,
+        description: "7번째 메모로 이동합니다",
+        category: "note",
+        enabled: true,
+        priority: 10,
+      },
+      {
+        id: "default.note.goTo8",
+        keys: "ctrl+8",
+        action: "note.goTo8",
+        context: ShortcutContext.GLOBAL,
+        description: "8번째 메모로 이동합니다",
+        category: "note",
+        enabled: true,
+        priority: 10,
+      },
+      {
+        id: "default.note.goTo9",
+        keys: "ctrl+9",
+        action: "note.goTo9",
+        context: ShortcutContext.GLOBAL,
+        description: "9번째 메모로 이동합니다",
+        category: "note",
+        enabled: true,
+        priority: 10,
+      },
+      {
+        id: "default.note.goTo0",
+        keys: "ctrl+0",
+        action: "note.goTo0",
+        context: ShortcutContext.GLOBAL,
+        description: "마지막 메모로 이동합니다",
+        category: "note",
+        enabled: true,
+        priority: 10,
+      },
+
+      // 삭제 관리 단축키
+      {
+        id: "default.delete.current",
+        keys: "ctrl+d",
+        action: "note.delete",
+        context: ShortcutContext.GLOBAL,
+        description: "현재 노트를 삭제합니다",
+        category: "delete",
+        enabled: true,
+        priority: 10,
+      },
+      {
+        id: "default.delete.selected",
+        keys: "delete",
+        action: "note.deleteSelected",
+        context: ShortcutContext.LIST,
+        description: "선택된 노트를 삭제합니다",
+        category: "delete",
+        enabled: true,
+        priority: 10,
+      },
+      {
+        id: "default.delete.immediate",
+        keys: "shift+delete",
+        action: "note.deleteImmediate",
+        context: ShortcutContext.GLOBAL,
+        description: "확인 없이 즉시 노트를 삭제합니다",
+        category: "delete",
         enabled: true,
         priority: 10,
       },
@@ -119,13 +203,17 @@ export class DefaultShortcuts {
    */
   registerAll(
     noteService?: NoteService,
-    autoSaveService?: AutoSaveService
+    autoSaveService?: AutoSaveService,
+    confirmDialogService?: any,
+    getCurrentNote?: () => any,
+    setCurrentNote?: (note: any) => void,
+    loadNotes?: () => Promise<void>,
+    tabStore?: any
   ): void {
     try {
       // 액션 등록 (서비스가 제공된 경우에만)
       if (noteService && autoSaveService) {
         const fileActions = createFileActions(noteService, autoSaveService);
-        const tabActions = createTabActions();
 
         // 파일 액션 등록
         this.shortcutManager.registerAction(fileActions.createNewNote);
@@ -133,12 +221,26 @@ export class DefaultShortcuts {
         this.shortcutManager.registerAction(fileActions.saveAllNotes);
         this.shortcutManager.registerAction(fileActions.openNoteList);
 
-        // 탭 액션 등록
-        this.shortcutManager.registerAction(tabActions.createNewTab);
-        this.shortcutManager.registerAction(tabActions.closeCurrentTab);
-        this.shortcutManager.registerAction(tabActions.nextTab);
-        this.shortcutManager.registerAction(tabActions.previousTab);
-        this.shortcutManager.registerAction(tabActions.searchTabs);
+        // 삭제 액션 등록 (필요한 서비스가 모두 제공된 경우에만)
+        if (
+          confirmDialogService &&
+          getCurrentNote &&
+          setCurrentNote &&
+          loadNotes
+        ) {
+          const deleteActions = createDeleteActions(
+            noteService,
+            confirmDialogService,
+            getCurrentNote,
+            setCurrentNote,
+            loadNotes
+          );
+          this.shortcutManager.registerAction(deleteActions.deleteCurrentNote);
+          this.shortcutManager.registerAction(deleteActions.deleteSelectedNote);
+          this.shortcutManager.registerAction(
+            deleteActions.deleteNoteWithoutConfirm
+          );
+        }
       }
 
       // 단축키 등록
@@ -163,11 +265,9 @@ export class DefaultShortcuts {
         "file.save",
         "file.saveAll",
         "file.openList",
-        "tab.new",
-        "tab.close",
-        "tab.next",
-        "tab.prev",
-        "tab.search",
+        "note.delete",
+        "note.deleteSelected",
+        "note.deleteImmediate",
       ];
 
       actionIds.forEach((actionId) => {

@@ -294,4 +294,220 @@ describe("Tab Actions", () => {
       consoleSpy.mockRestore();
     });
   });
+
+  describe("goToTab actions", () => {
+    it("should have correct metadata for all tab number actions", () => {
+      expect(tabActions.goToTab1.id).toBe("tab.goTo1");
+      expect(tabActions.goToTab1.name).toBe("탭 1로 이동");
+      expect(tabActions.goToTab1.description).toBe("1번째 탭으로 이동합니다");
+
+      expect(tabActions.goToTab0.id).toBe("tab.goTo0");
+      expect(tabActions.goToTab0.name).toBe("탭 0로 이동");
+      expect(tabActions.goToTab0.description).toBe(
+        "0번째 탭으로 이동합니다 (마지막 탭)"
+      );
+    });
+
+    it("should go to first tab with Ctrl+1", async () => {
+      const mockTabs = [
+        { id: "tab-1", noteId: "note-1", position: 0, isActive: false },
+        { id: "tab-2", noteId: "note-2", position: 1, isActive: true },
+        { id: "tab-3", noteId: "note-3", position: 2, isActive: false },
+      ];
+
+      const { get } = await import("svelte/store");
+      (get as any).mockReturnValue(mockTabs);
+
+      const mockEvent = new KeyboardEvent("keydown", {
+        key: "1",
+        ctrlKey: true,
+      });
+      await tabActions.goToTab1.handler(mockEvent);
+
+      expect(tabStore.setActiveTab).toHaveBeenCalledWith("tab-1");
+    });
+
+    it("should go to third tab with Ctrl+3", async () => {
+      const mockTabs = [
+        { id: "tab-1", noteId: "note-1", position: 0, isActive: true },
+        { id: "tab-2", noteId: "note-2", position: 1, isActive: false },
+        { id: "tab-3", noteId: "note-3", position: 2, isActive: false },
+      ];
+
+      const { get } = await import("svelte/store");
+      (get as any).mockReturnValue(mockTabs);
+
+      const mockEvent = new KeyboardEvent("keydown", {
+        key: "3",
+        ctrlKey: true,
+      });
+      await tabActions.goToTab3.handler(mockEvent);
+
+      expect(tabStore.setActiveTab).toHaveBeenCalledWith("tab-3");
+    });
+
+    it("should go to last tab with Ctrl+0", async () => {
+      const mockTabs = [
+        { id: "tab-1", noteId: "note-1", position: 0, isActive: true },
+        { id: "tab-2", noteId: "note-2", position: 1, isActive: false },
+        { id: "tab-3", noteId: "note-3", position: 2, isActive: false },
+        { id: "tab-4", noteId: "note-4", position: 3, isActive: false },
+      ];
+
+      const { get } = await import("svelte/store");
+      (get as any).mockReturnValue(mockTabs);
+
+      const mockEvent = new KeyboardEvent("keydown", {
+        key: "0",
+        ctrlKey: true,
+      });
+      await tabActions.goToTab0.handler(mockEvent);
+
+      expect(tabStore.setActiveTab).toHaveBeenCalledWith("tab-4");
+    });
+
+    it("should handle non-existing tab number gracefully", async () => {
+      const mockTabs = [
+        { id: "tab-1", noteId: "note-1", position: 0, isActive: true },
+        { id: "tab-2", noteId: "note-2", position: 1, isActive: false },
+      ];
+
+      const { get } = await import("svelte/store");
+      (get as any).mockReturnValue(mockTabs);
+
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      const mockEvent = new KeyboardEvent("keydown", {
+        key: "5",
+        ctrlKey: true,
+      });
+      await tabActions.goToTab5.handler(mockEvent);
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "5번째 탭이 존재하지 않습니다 (총 2개 탭)"
+      );
+      expect(tabStore.setActiveTab).not.toHaveBeenCalled();
+
+      consoleSpy.mockRestore();
+    });
+
+    it("should handle empty tabs gracefully", async () => {
+      const { get } = await import("svelte/store");
+      (get as any).mockReturnValue([]);
+
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      const mockEvent = new KeyboardEvent("keydown", {
+        key: "1",
+        ctrlKey: true,
+      });
+      await tabActions.goToTab1.handler(mockEvent);
+
+      expect(consoleSpy).toHaveBeenCalledWith("이동할 탭이 없습니다");
+      expect(tabStore.setActiveTab).not.toHaveBeenCalled();
+
+      consoleSpy.mockRestore();
+    });
+
+    it("should handle errors gracefully", async () => {
+      const { get } = await import("svelte/store");
+      (get as any).mockImplementation(() => {
+        throw new Error("Store error");
+      });
+
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+
+      const mockEvent = new KeyboardEvent("keydown", {
+        key: "1",
+        ctrlKey: true,
+      });
+
+      await expect(
+        tabActions.goToTab1.handler(mockEvent)
+      ).resolves.not.toThrow();
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "탭 1 이동 실패:",
+        expect.any(Error)
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it("should work correctly with single tab (Ctrl+0)", async () => {
+      const mockTabs = [
+        { id: "tab-1", noteId: "note-1", position: 0, isActive: true },
+      ];
+
+      const { get } = await import("svelte/store");
+      (get as any).mockReturnValue(mockTabs);
+
+      const mockEvent = new KeyboardEvent("keydown", {
+        key: "0",
+        ctrlKey: true,
+      });
+      await tabActions.goToTab0.handler(mockEvent);
+
+      expect(tabStore.setActiveTab).toHaveBeenCalledWith("tab-1");
+    });
+
+    it("should not move to tab when Ctrl key is not pressed", async () => {
+      const mockTabs = [
+        { id: "tab-1", noteId: "note-1", position: 0, isActive: false },
+        { id: "tab-2", noteId: "note-2", position: 1, isActive: true },
+      ];
+
+      const { get } = await import("svelte/store");
+      (get as any).mockReturnValue(mockTabs);
+
+      // Ctrl 키 없이 이벤트 생성
+      const mockEvent = new KeyboardEvent("keydown", {
+        key: "1",
+        ctrlKey: false,
+      });
+      await tabActions.goToTab1.handler(mockEvent);
+
+      // 탭 이동이 발생하지 않아야 함
+      expect(tabStore.setActiveTab).not.toHaveBeenCalled();
+    });
+
+    it("should require both Ctrl key and proper event state", async () => {
+      const mockTabs = [
+        { id: "tab-1", noteId: "note-1", position: 0, isActive: false },
+        { id: "tab-2", noteId: "note-2", position: 1, isActive: true },
+      ];
+
+      const { get } = await import("svelte/store");
+      (get as any).mockReturnValue(mockTabs);
+
+      // 다양한 잘못된 조건들 테스트
+      const invalidEvents = [
+        // Ctrl 키 없음
+        new KeyboardEvent("keydown", { key: "1", ctrlKey: false }),
+        // Shift+1 (Ctrl이 아님)
+        new KeyboardEvent("keydown", { key: "1", shiftKey: true }),
+        // Alt+1 (Ctrl이 아님)
+        new KeyboardEvent("keydown", { key: "1", altKey: true }),
+      ];
+
+      for (const invalidEvent of invalidEvents) {
+        await tabActions.goToTab1.handler(invalidEvent);
+      }
+
+      // 모든 잘못된 이벤트에 대해 탭 이동이 발생하지 않아야 함
+      expect(tabStore.setActiveTab).not.toHaveBeenCalled();
+
+      // 올바른 조건에서는 작동해야 함
+      const validEvent = new KeyboardEvent("keydown", {
+        key: "1",
+        ctrlKey: true,
+      });
+      await tabActions.goToTab1.handler(validEvent);
+
+      // 이번에는 탭 이동이 발생해야 함
+      expect(tabStore.setActiveTab).toHaveBeenCalledWith("tab-1");
+    });
+  });
 });

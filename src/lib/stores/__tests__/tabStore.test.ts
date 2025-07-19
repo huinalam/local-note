@@ -169,4 +169,103 @@ describe("TabStore", () => {
     expect(tabs[0].id).toBe("tab-2");
     expect(tabs[0].isActive).toBe(true);
   });
+
+  test("should remove tab by note id correctly", () => {
+    const tab1: Tab = {
+      id: "tab-1",
+      noteId: "note-1",
+      position: 0,
+      isActive: true,
+    };
+    const tab2: Tab = {
+      id: "tab-2",
+      noteId: "note-2",
+      position: 1,
+      isActive: false,
+    };
+    const tab3: Tab = {
+      id: "tab-3",
+      noteId: "note-3",
+      position: 2,
+      isActive: false,
+    };
+
+    tabStore.addTab(tab1);
+    tabStore.addTab(tab2);
+    tabStore.addTab(tab3);
+
+    tabStore.removeTabByNoteId("note-2");
+
+    const tabs = get(tabStore);
+    expect(tabs).toHaveLength(2);
+    expect(tabs.find((tab) => tab.noteId === "note-2")).toBeUndefined();
+    expect(tabs[0].position).toBe(0);
+    expect(tabs[1].position).toBe(1);
+  });
+
+  test("should activate first tab when removing active tab by note id", () => {
+    const tab1: Tab = {
+      id: "tab-1",
+      noteId: "note-1",
+      position: 0,
+      isActive: true,
+    };
+    const tab2: Tab = {
+      id: "tab-2",
+      noteId: "note-2",
+      position: 1,
+      isActive: false,
+    };
+
+    tabStore.addTab(tab1);
+    tabStore.addTab(tab2);
+
+    tabStore.removeTabByNoteId("note-1");
+
+    const tabs = get(tabStore);
+    expect(tabs).toHaveLength(1);
+    expect(tabs[0].noteId).toBe("note-2");
+    expect(tabs[0].isActive).toBe(true);
+  });
+
+  test("should do nothing when removing non-existing note id", () => {
+    const tab1: Tab = {
+      id: "tab-1",
+      noteId: "note-1",
+      position: 0,
+      isActive: true,
+    };
+
+    tabStore.addTab(tab1);
+    tabStore.removeTabByNoteId("non-existing-note");
+
+    const tabs = get(tabStore);
+    expect(tabs).toHaveLength(1);
+    expect(tabs[0]).toEqual(tab1);
+  });
+
+  test("should maintain active state when removing non-active tab by note id", () => {
+    const tab1: Tab = {
+      id: "tab-1",
+      noteId: "note-1",
+      position: 0,
+      isActive: true,
+    };
+    const tab2: Tab = {
+      id: "tab-2",
+      noteId: "note-2",
+      position: 1,
+      isActive: false,
+    };
+
+    tabStore.addTab(tab1);
+    tabStore.addTab(tab2);
+
+    tabStore.removeTabByNoteId("note-2");
+
+    const tabs = get(tabStore);
+    expect(tabs).toHaveLength(1);
+    expect(tabs[0].noteId).toBe("note-1");
+    expect(tabs[0].isActive).toBe(true);
+  });
 });

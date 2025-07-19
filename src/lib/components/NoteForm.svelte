@@ -1,12 +1,15 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import NoteList from './NoteList.svelte';
-  import NoteEditor from './NoteEditor.svelte';
+  import SimpleMDEEditor from './SimpleMDEEditor.svelte';
+  import ConfirmDialog from './ConfirmDialog.svelte';
   import { NoteService } from '../services/noteService';
   import { AutoSaveService } from '../services/autoSaveService';
   import { NoteDatabase } from '../database/NoteDatabase';
   import { ShortcutManager } from '../services/ShortcutManager';
   import { DefaultShortcuts } from '../services/DefaultShortcuts';
+  import { ConfirmDialogService, confirmDialogStore } from '../services/confirmDialogService';
+  import { createNoteNavigationActions } from '../actions/noteNavigationActions';
   import type { Note } from '../database/types';
 
   let notes: Note[] = [];
@@ -16,6 +19,7 @@
   const db = new NoteDatabase();
   const noteService = new NoteService(db);
   const autoSaveService = new AutoSaveService(noteService);
+  const confirmDialogService = new ConfirmDialogService();
   
   // 단축키 시스템 초기화
   let shortcutManager: ShortcutManager;
@@ -52,10 +56,17 @@
           content: updatedNote.content
         });
         
+        // 기존 노트 편집 시: 위치 유지를 위해 현재 배열에서만 업데이트
+        const noteIndex = notes.findIndex(note => note.id === updatedNote.id);
+        if (noteIndex !== -1) {
+          // 현재 배열에서 해당 노트만 업데이트 (위치 유지)
+          notes[noteIndex] = { ...notes[noteIndex], ...updatedNote };
+          notes = [...notes]; // 반응성을 위한 새 배열 생성
+        }
+        
         // Wait a bit for auto-save, then update status
-        setTimeout(async () => {
+        setTimeout(() => {
           saveStatus = 'saved';
-          await loadNotes(); // Refresh the list
           setTimeout(() => saveStatus = 'idle', 2000);
         }, 600);
       } else if (updatedNote.content.trim()) {
@@ -65,8 +76,10 @@
           updatedNote.content
         );
         currentNote = newNote;
+        
         saveStatus = 'saved';
-        await loadNotes(); // Refresh the list
+        // 새 노트 생성 시에만 전체 목록 새로고침
+        await loadNotes();
         setTimeout(() => saveStatus = 'idle', 2000);
       } else {
         saveStatus = 'idle';
@@ -84,7 +97,95 @@
   }
 
   function handleNoteSelect(note: Note) {
+    // 선택된 메모를 현재 노트로 설정
     currentNote = note;
+    saveStatus = 'idle';
+  }
+
+  async function handleNoteDelete(note: Note) {
+    try {
+      // 확인 다이얼로그 표시
+      confirmDialogService.show({
+        title: "노트 삭제",
+        message: `"${note.title || '제목 없음'}" 노트를 삭제하시겠습니까?\n삭제된 노트는 복구할 수 없습니다.`,
+        confirmText: "삭제",
+        cancelText: "취소",
+        variant: "danger",
+        onConfirm: async () => {
+          try {
+            const success = await noteService.deleteNote(note.id);
+            if (success) {
+              // 노트 목록 새로고침
+              await loadNotes();
+              
+              // 현재 노트가 삭제된 노트와 같다면 빈 노트로 초기화
+              if (currentNote.id === note.id) {
+                currentNote = createEmptyNote();
+                saveStatus = 'idle';
+              }
+              
+              console.log("노트가 성공적으로 삭제되었습니다");
+            } else {
+              console.error("노트 삭제 실패: 노트를 찾을 수 없습니다");
+            }
+          } catch (error) {
+            console.error("노트 삭제 실패:", error);
+          }
+          confirmDialogService.hide();
+        },
+        onCancel: () => {
+          console.log("노트 삭제가 취소되었습니다");
+          confirmDialogService.hide();
+        },
+      });
+    } catch (error) {
+      console.error("삭제 다이얼로그 표시 실패:", error);
+    }
+  }
+
+  async function handleNoteReorder(event: CustomEvent<{ noteId: string; newIndex: number }>) {
+    try {
+      const { noteId, newIndex } = event.detail;
+      
+      // 현재 노트 배열을 복사
+      const reorderedNotes = [...notes];
+      
+      // 드래그된 노트 찾기
+      const draggedNoteIndex = reorderedNotes.findIndex(note => note.id === noteId);
+      if (draggedNoteIndex === -1) return;
+      
+      // 노트를 배열에서 제거
+      const [draggedNote] = reorderedNotes.splice(draggedNoteIndex, 1);
+      
+      // 새 위치에 노트 삽입
+      reorderedNotes.splice(newIndex, 0, draggedNote);
+      
+      // 노트 배열 업데이트 (즉시 UI 반영)
+      notes = reorderedNotes;
+      
+      // 데이터베이스에 순서 정보 저장
+      await noteService.reorderNote(noteId, newIndex);
+      
+      console.log(`노트 "${draggedNote.title}"이 ${newIndex + 1}번째 위치로 이동했습니다`);
+      
+    } catch (error) {
+      console.error('노트 순서 변경 실패:', error);
+      // 에러 발생 시 원래 순서로 되돌리기
+      await loadNotes();
+    }
+  }
+
+  // 현재 노트 상태 관리 함수들 (삭제 액션에서 사용)
+  function getCurrentNote() {
+    return currentNote.id ? currentNote : null;
+  }
+
+  function setCurrentNote(note: Note | null) {
+    if (note) {
+      currentNote = note;
+    } else {
+      currentNote = createEmptyNote();
+    }
     saveStatus = 'idle';
   }
 
@@ -97,7 +198,32 @@
       defaultShortcuts = new DefaultShortcuts(shortcutManager);
       
       // 기본 단축키와 액션을 등록 (서비스와 함께)
-      defaultShortcuts.registerAll(noteService, autoSaveService);
+      defaultShortcuts.registerAll(
+        noteService, 
+        autoSaveService, 
+        confirmDialogService,
+        getCurrentNote,
+        setCurrentNote,
+        loadNotes
+      );
+
+      // 메모 네비게이션 액션 등록 (실제 데이터와 연동)
+      const noteNavigationActions = createNoteNavigationActions(
+        () => notes,
+        getCurrentNote,
+        setCurrentNote
+      );
+      
+      // 메모 번호 이동 단축키 등록
+      shortcutManager.registerAction(noteNavigationActions.goToNote1);
+      shortcutManager.registerAction(noteNavigationActions.goToNote2);
+      shortcutManager.registerAction(noteNavigationActions.goToNote3);
+      shortcutManager.registerAction(noteNavigationActions.goToNote4);
+      shortcutManager.registerAction(noteNavigationActions.goToNote5);
+      shortcutManager.registerAction(noteNavigationActions.goToNote6);
+      shortcutManager.registerAction(noteNavigationActions.goToNote7);
+      shortcutManager.registerAction(noteNavigationActions.goToNote8);
+      shortcutManager.registerAction(noteNavigationActions.goToNote9);
       
       console.log('단축키 시스템이 초기화되었습니다');
     } catch (error) {
@@ -140,16 +266,36 @@
     </div>
     
     <div class="note-list-container">
-      <NoteList {notes} on:noteSelect={(e) => handleNoteSelect(e.detail)} />
+      <NoteList 
+        {notes} 
+        currentNoteId={currentNote?.id}
+        on:noteSelect={(e) => handleNoteSelect(e.detail)}
+        on:noteDelete={(e) => handleNoteDelete(e.detail)}
+        on:noteReorder={handleNoteReorder}
+      />
     </div>
   </aside>
 
   <main class="editor-area">
     <div class="editor-container">
-      <NoteEditor note={currentNote} onChange={handleNoteChange} />
+      <SimpleMDEEditor note={currentNote} onChange={handleNoteChange} />
     </div>
   </main>
 </div>
+
+<!-- 확인 다이얼로그 -->
+{#if $confirmDialogStore.isOpen && $confirmDialogStore.config}
+  <ConfirmDialog
+    isOpen={$confirmDialogStore.isOpen}
+    title={$confirmDialogStore.config.title}
+    message={$confirmDialogStore.config.message}
+    confirmText={$confirmDialogStore.config.confirmText}
+    cancelText={$confirmDialogStore.config.cancelText}
+    variant={$confirmDialogStore.config.variant}
+    onConfirm={$confirmDialogStore.config.onConfirm}
+    onCancel={$confirmDialogStore.config.onCancel}
+  />
+{/if}
 
 <style>
   .note-app {
@@ -226,62 +372,9 @@
     background: var(--color-bg-primary);
   }
 
-  .editor-header {
-    padding: var(--space-4) var(--space-6);
-    border-bottom: 1px solid var(--color-border-secondary);
-    background: var(--color-bg-secondary);
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    min-height: 60px;
-  }
-
-  .save-status {
-    font-size: var(--font-size-sm);
-  }
-
-  .status {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-3);
-    border-radius: 0.375rem;
-    font-weight: var(--font-weight-medium);
-    transition: all 0.2s ease;
-  }
-
-  .status.saving {
-    color: var(--color-warning-500);
-    background: rgba(245, 158, 11, 0.1);
-  }
-
-  .status.saved {
-    color: var(--color-success-500);
-    background: rgba(34, 197, 94, 0.1);
-  }
-
-  .status.error {
-    color: var(--color-error-500);
-    background: rgba(239, 68, 68, 0.1);
-  }
-
-  .spinner {
-    width: 12px;
-    height: 12px;
-    border: 2px solid transparent;
-    border-top: 2px solid currentColor;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-
-  .check-icon, .error-icon {
-    font-weight: var(--font-weight-bold);
-  }
-
   .editor-container {
     flex: 1;
-    padding: var(--space-4);
-    overflow: hidden;
+    min-height: 0;
   }
 
   @keyframes spin {

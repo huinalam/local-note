@@ -24,6 +24,7 @@
     "@sveltejs/vite-plugin-svelte": "^6.0.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/svelte": "^5.2.8",
+    "@types/codemirror": "^5.60.16",
     "@types/serviceworker": "^0.0.141",
     "@vite-pwa/sveltekit": "^1.0.0",
     "fake-indexeddb": "^6.0.1",
@@ -47,7 +48,9 @@
   },
   "packageManager": "pnpm@10.5.2+sha512.da9dc28cd3ff40d0592188235ab25d3202add8a207afbedc682220e4a0029ffbff4562102b9e6e46b4e3f9e8bd53e6d05de48544b0c57d4b0179e22c76d1199b",
   "dependencies": {
+    "codemirror": "^6.0.2",
     "dexie": "^4.0.11",
+    "easymde": "^2.20.0",
     "highlight.js": "^11.11.1",
     "katex": "^0.16.22",
     "marked": "^16.0.0"

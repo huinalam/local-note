@@ -1,9 +1,8 @@
 import Dexie, { type Table } from "dexie";
-import type { Note, Tab, Setting } from "./types";
+import type { Note, Setting } from "./types";
 
 export class NoteDatabase extends Dexie {
   notes!: Table<Note>;
-  tabs!: Table<Tab>;
   settings!: Table<Setting>;
 
   constructor() {
@@ -12,6 +11,19 @@ export class NoteDatabase extends Dexie {
     this.version(1).stores({
       notes: "id, title, content, *tags, createdAt, updatedAt",
       tabs: "id, noteId, position, isActive",
+      settings: "key, value",
+    });
+
+    // 버전 2: order 필드 추가
+    this.version(2).stores({
+      notes: "id, title, content, *tags, createdAt, updatedAt, order",
+      tabs: "id, noteId, position, isActive",
+      settings: "key, value",
+    });
+
+    // 버전 3: 탭 테이블 제거 (메모 중심 설계로 변경)
+    this.version(3).stores({
+      notes: "id, title, content, *tags, createdAt, updatedAt, order",
       settings: "key, value",
     });
   }

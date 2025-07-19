@@ -194,4 +194,112 @@ describe("Note Service", () => {
       expect(results).toEqual([]);
     });
   });
+
+  describe("note ordering", () => {
+    it("should maintain custom order when order field is set", async () => {
+      // 노트를 생성 순서대로 만들기
+      const note1 = await noteService.createNote("First Note", "Content 1");
+      await new Promise((resolve) => setTimeout(resolve, 10)); // 시간 차이 보장
+      const note2 = await noteService.createNote("Second Note", "Content 2");
+      await new Promise((resolve) => setTimeout(resolve, 10)); // 시간 차이 보장
+      const note3 = await noteService.createNote("Third Note", "Content 3");
+
+      // 사용자 정의 순서 설정 (역순으로)
+      await noteService.updateNote(note1.id, { order: 2 });
+      await noteService.updateNote(note2.id, { order: 1 });
+      await noteService.updateNote(note3.id, { order: 0 });
+
+      const notes = await noteService.getAllNotes();
+      expect(notes).toHaveLength(3);
+      expect(notes[0].title).toBe("Third Note"); // order: 0
+      expect(notes[1].title).toBe("Second Note"); // order: 1
+      expect(notes[2].title).toBe("First Note"); // order: 2
+    });
+
+    it("should use createdAt when no order is set", async () => {
+      const note1 = await noteService.createNote("Older Note", "Content 1");
+      await new Promise((resolve) => setTimeout(resolve, 10)); // 시간 차이 보장
+      const note2 = await noteService.createNote("Newer Note", "Content 2");
+
+      const notes = await noteService.getAllNotes();
+      expect(notes).toHaveLength(2);
+      // order가 없는 경우 createdAt 역순 (최신이 위)
+      expect(notes[0].title).toBe("Newer Note");
+      expect(notes[1].title).toBe("Older Note");
+    });
+
+    it("should prioritize order over createdAt", async () => {
+      const note1 = await noteService.createNote("Old Note", "Content 1");
+      await new Promise((resolve) => setTimeout(resolve, 10)); // 시간 차이 보장
+      const note2 = await noteService.createNote("New Note", "Content 2");
+
+      // 오래된 노트에 낮은 order 값 할당
+      await noteService.updateNote(note1.id, { order: 0 });
+
+      const notes = await noteService.getAllNotes();
+      expect(notes).toHaveLength(2);
+      // order가 있는 노트가 우선
+      expect(notes[0].title).toBe("Old Note"); // order: 0
+      expect(notes[1].title).toBe("New Note"); // order 없음
+    });
+
+    it("should reorder notes with reorderNote method", async () => {
+      const note1 = await noteService.createNote("Note 1", "Content 1");
+      const note2 = await noteService.createNote("Note 2", "Content 2");
+      const note3 = await noteService.createNote("Note 3", "Content 3");
+
+      // 첫 번째 노트를 세 번째 위치로 이동
+      await noteService.reorderNote(note1.id, 2);
+
+      const notes = await noteService.getAllNotes();
+      expect(notes).toHaveLength(3);
+      expect(notes[0].title).toBe("Note 2"); // 새로운 첫 번째
+      expect(notes[1].title).toBe("Note 3"); // 새로운 두 번째
+      expect(notes[2].title).toBe("Note 1"); // 새로운 세 번째
+    });
+
+    it("should handle reorderNote with invalid noteId", async () => {
+      await noteService.createNote("Note 1", "Content 1");
+
+      // 존재하지 않는 노트 ID로 순서 변경 시도
+      await noteService.reorderNote("non-existing-id", 0);
+
+      const notes = await noteService.getAllNotes();
+      expect(notes).toHaveLength(1);
+      expect(notes[0].title).toBe("Note 1");
+    });
+
+    it("should handle reorderNote with same position", async () => {
+      const note1 = await noteService.createNote("Note 1", "Content 1");
+      const note2 = await noteService.createNote("Note 2", "Content 2");
+
+      // 같은 위치로 이동
+      await noteService.reorderNote(note1.id, 0);
+
+      const notes = await noteService.getAllNotes();
+      expect(notes).toHaveLength(2);
+      // 순서가 변경되지 않아야 함
+      expect(notes[0].title).toBe("Note 2");
+      expect(notes[1].title).toBe("Note 1");
+    });
+
+    it("should update multiple note orders with updateNoteOrders", async () => {
+      const note1 = await noteService.createNote("Note A", "Content 1");
+      const note2 = await noteService.createNote("Note B", "Content 2");
+      const note3 = await noteService.createNote("Note C", "Content 3");
+
+      // 여러 노트의 순서를 한 번에 업데이트
+      await noteService.updateNoteOrders({
+        [note1.id]: 2,
+        [note2.id]: 0,
+        [note3.id]: 1,
+      });
+
+      const notes = await noteService.getAllNotes();
+      expect(notes).toHaveLength(3);
+      expect(notes[0].title).toBe("Note B"); // order: 0
+      expect(notes[1].title).toBe("Note C"); // order: 1
+      expect(notes[2].title).toBe("Note A"); // order: 2
+    });
+  });
 });

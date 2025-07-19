@@ -5,13 +5,7 @@ export interface Note {
   tags: string[];
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface Tab {
-  id: string;
-  noteId: string;
-  position: number;
-  isActive: boolean;
+  order?: number; // 사용자 정의 순서 (옵셔널, 기본값은 createdAt 기준)
 }
 
 export interface Setting {
