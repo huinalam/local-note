@@ -39,8 +39,7 @@ describe("Delete Actions", () => {
       mockConfirmDialog,
       mockGetCurrentNote,
       mockSetCurrentNote,
-      mockLoadNotes,
-      mockTabStore
+      mockLoadNotes
     );
   });
 

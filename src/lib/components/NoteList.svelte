@@ -134,7 +134,6 @@
         on:dragleave={handleDragLeave}
         on:drop={(e) => handleDrop(e, index)}
         role="listitem"
-        tabindex="0"
       >
         <button
           class="note-item"
@@ -267,6 +266,7 @@
     line-height: 1.5;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }

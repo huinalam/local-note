@@ -17,7 +17,6 @@ describe("Database Schema", () => {
 
   it("should define note database schema correctly", () => {
     expect(db.notes).toBeDefined();
-    expect(db.tabs).toBeDefined();
     expect(db.settings).toBeDefined();
   });
 
@@ -27,14 +26,6 @@ describe("Database Schema", () => {
 
     expect(noteSchema.primKey.name).toBe("id");
     expect(noteSchema.indexes).toBeDefined();
-  });
-
-  it("should have correct table structure for tabs", async () => {
-    await db.open();
-    const tabSchema = db.tabs.schema;
-
-    expect(tabSchema.primKey.name).toBe("id");
-    expect(tabSchema.indexes).toBeDefined();
   });
 
   it("should have correct table structure for settings", async () => {

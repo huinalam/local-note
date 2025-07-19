@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ContextManager } from "../ContextManager";
 import { ShortcutContext } from "../../types/shortcut";
 import type { Shortcut } from "../../types/shortcut";
