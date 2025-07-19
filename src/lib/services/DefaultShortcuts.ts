@@ -62,6 +62,18 @@ export class DefaultShortcuts {
         priority: 10,
       },
 
+      // 검색 단축키
+      {
+        id: "default.search.openModal",
+        keys: "ctrl+e",
+        action: "search.openModal",
+        context: ShortcutContext.GLOBAL,
+        description: "메모 검색 모달을 엽니다",
+        category: "search",
+        enabled: true,
+        priority: 10,
+      },
+
       // 메모 네비게이션 단축키
       {
         id: "default.note.goTo1",

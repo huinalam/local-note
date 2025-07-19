@@ -10,11 +10,14 @@
   import { DefaultShortcuts } from '../services/DefaultShortcuts';
   import { ConfirmDialogService, confirmDialogStore } from '../services/confirmDialogService';
   import { createNoteNavigationActions } from '../actions/noteNavigationActions';
+  import { createSearchActions } from '../actions/searchActions';
+  import SearchModal from './SearchModal.svelte';
   import type { Note } from '../database/types';
 
   let notes: Note[] = [];
   let currentNote: Note = createEmptyNote();
   let saveStatus: 'idle' | 'saving' | 'saved' | 'error' = 'idle';
+  let isSearchModalOpen = false;
   
   const db = new NoteDatabase();
   const noteService = new NoteService(db);
@@ -189,6 +192,19 @@
     saveStatus = 'idle';
   }
 
+  function openSearchModal() {
+    isSearchModalOpen = true;
+  }
+
+  function closeSearchModal() {
+    isSearchModalOpen = false;
+  }
+
+  function handleNoteSelectFromSearch(note: Note) {
+    currentNote = note;
+    closeSearchModal();
+  }
+
   onMount(() => {
     loadNotes();
     
@@ -213,6 +229,10 @@
         getCurrentNote,
         setCurrentNote
       );
+      
+      // 검색 액션 등록
+      const searchActions = createSearchActions(openSearchModal);
+      shortcutManager.registerAction(searchActions.openSearchModal);
       
       // 메모 번호 이동 단축키 등록
       shortcutManager.registerAction(noteNavigationActions.goToNote1);
@@ -296,6 +316,14 @@
     onCancel={$confirmDialogStore.config.onCancel}
   />
 {/if}
+
+<!-- 검색 모달 -->
+<SearchModal 
+  isOpen={isSearchModalOpen}
+  onClose={closeSearchModal}
+  onNoteSelect={handleNoteSelectFromSearch}
+  notes={notes}
+/>
 
 <style>
   .note-app {
