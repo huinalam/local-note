@@ -57,6 +57,7 @@ export function NotesApp({ activeNoteId }: NotesAppProps) {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const activeIdRef = useRef<string | undefined>(activeNoteId);
   const notesRef = useRef<NoteRecord[]>([]);
@@ -281,6 +282,14 @@ export function NotesApp({ activeNoteId }: NotesAppProps) {
     }
   };
 
+  const handleHideSidebar = () => {
+    setIsSidebarCollapsed(true);
+  };
+
+  const handleShowSidebar = () => {
+    setIsSidebarCollapsed(false);
+  };
+
   const handleSelectNote = async (noteId: string) => {
     if (noteId === activeNoteId) return;
     await flushSave();
@@ -385,74 +394,134 @@ export function NotesApp({ activeNoteId }: NotesAppProps) {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-slate-950 text-slate-100 md:flex-row">
-      <aside className="flex w-full shrink-0 flex-col border-b border-slate-900/80 bg-slate-900/70 p-4 md:w-80 md:border-r md:border-b-0 md:p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <p className="text-xs tracking-wide text-slate-400 uppercase">
-              local-note
-            </p>
-            <h1 className="text-lg font-semibold">My Notes</h1>
-          </div>
-          <button
-            type="button"
-            onClick={handleCreateNote}
-            disabled={isCreating}
-            className="rounded-md bg-sky-500 px-3 py-2 text-xs font-medium text-white shadow transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:bg-slate-600"
+    <div className="relative flex h-screen flex-col bg-slate-950 text-slate-100 md:flex-row">
+      {isSidebarCollapsed ? (
+        <button
+          type="button"
+          onClick={handleShowSidebar}
+          aria-label="Show notes menu"
+          className="absolute left-0 top-1/2 hidden h-24 w-10 -translate-y-1/2 -translate-x-1/2 items-center justify-center rounded-r-md border border-slate-800 bg-slate-900/80 shadow transition hover:border-sky-400 hover:text-sky-100 md:flex"
+        >
+          <svg
+            className="h-5 w-5 text-slate-200"
+            viewBox="0 0 20 20"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
           >
-            {isCreating ? "Creating…" : "New note"}
-          </button>
-        </div>
-        <div className="mb-3">
-          <input
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Search notes…"
-            className="w-full rounded-md border border-slate-800 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-500/40"
-          />
-        </div>
-        <div className="flex-1 overflow-y-auto pr-1">
-          {filteredNotes.length === 0 ? (
-            <div className="rounded-md border border-slate-800/60 bg-slate-900/40 p-4 text-sm text-slate-400">
-              {searchTerm ? (
-                <p>No notes match “{searchTerm}”.</p>
-              ) : (
-                <p>No notes yet. Create your first note.</p>
-              )}
+            <path
+              d="M7 5L12 10L7 15"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      ) : null}
+      {isSidebarCollapsed ? null : (
+        <aside className="flex w-full shrink-0 flex-col border-b border-slate-900/80 bg-slate-900/70 p-4 md:w-80 md:border-r md:border-b-0 md:p-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs tracking-wide text-slate-400 uppercase">
+                local-note
+              </p>
+              <h1 className="text-lg font-semibold">My Notes</h1>
             </div>
-          ) : (
-            <ul className="space-y-2">
-              {filteredNotes.map((note) => {
-                const isActive = note.id === activeNote?.id;
-                return (
-                  <li key={note.id}>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectNote(note.id)}
-                      className={`w-full rounded-md border px-3 py-2 text-left transition ${
-                        isActive
-                          ? "border-sky-500 bg-slate-800/80 text-sky-100"
-                          : "border-transparent bg-slate-900/30 text-slate-200 hover:border-slate-700 hover:bg-slate-900/60"
-                      }`}
-                    >
-                      <p className="truncate text-sm font-semibold">
-                        {note.title || "Untitled note"}
-                      </p>
-                      <p className="mt-1 line-clamp-2 text-xs text-slate-400">
-                        {note.content ? note.content : "No content yet."}
-                      </p>
-                      <p className="mt-2 text-[10px] tracking-wide text-slate-500 uppercase">
-                        Updated {formatTimestamp(note.updatedAt)}
-                      </p>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-      </aside>
-      <main className="flex flex-1 flex-col">{renderEditor()}</main>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleHideSidebar}
+                aria-label="Hide notes menu"
+                className="rounded-md border border-slate-700 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-sky-400 hover:text-sky-100"
+              >
+                Hide menu
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateNote}
+                disabled={isCreating}
+                className="rounded-md bg-sky-500 px-3 py-2 text-xs font-medium text-white shadow transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:bg-slate-600"
+              >
+                {isCreating ? "Creating…" : "New note"}
+              </button>
+            </div>
+          </div>
+          <div className="mb-3">
+            <input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search notes…"
+              className="w-full rounded-md border border-slate-800 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-500/40"
+            />
+          </div>
+          <div className="flex-1 overflow-y-auto pr-1">
+            {filteredNotes.length === 0 ? (
+              <div className="rounded-md border border-slate-800/60 bg-slate-900/40 p-4 text-sm text-slate-400">
+                {searchTerm ? (
+                  <p>No notes match “{searchTerm}”.</p>
+                ) : (
+                  <p>No notes yet. Create your first note.</p>
+                )}
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {filteredNotes.map((note) => {
+                  const isActive = note.id === activeNote?.id;
+                  return (
+                    <li key={note.id}>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectNote(note.id)}
+                        className={`w-full rounded-md border px-3 py-2 text-left transition ${
+                          isActive
+                            ? "border-sky-500 bg-slate-800/80 text-sky-100"
+                            : "border-transparent bg-slate-900/30 text-slate-200 hover:border-slate-700 hover:bg-slate-900/60"
+                        }`}
+                      >
+                        <p className="truncate text-sm font-semibold">
+                          {note.title || "Untitled note"}
+                        </p>
+                        <p className="mt-1 line-clamp-2 text-xs text-slate-400">
+                          {note.content ? note.content : "No content yet."}
+                        </p>
+                        <p className="mt-2 text-[10px] tracking-wide text-slate-500 uppercase">
+                          Updated {formatTimestamp(note.updatedAt)}
+                        </p>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </aside>
+      )}
+      <main
+        className={`flex flex-1 flex-col ${
+          isSidebarCollapsed ? "md:pl-12" : ""
+        }`}
+      >
+        {isSidebarCollapsed ? (
+          <div className="flex items-center justify-between gap-3 border-b border-slate-900/80 bg-slate-900/70 px-4 py-3 md:hidden">
+            <button
+              type="button"
+              onClick={handleShowSidebar}
+              className="flex items-center gap-2 rounded-md border border-slate-800 px-3 py-2 text-xs font-medium text-slate-100 transition hover:border-sky-400 hover:text-sky-100"
+            >
+              Show menu
+            </button>
+            <button
+              type="button"
+              onClick={handleCreateNote}
+              disabled={isCreating}
+              className="rounded-md bg-sky-500 px-3 py-2 text-xs font-medium text-white shadow transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:bg-slate-600"
+            >
+              {isCreating ? "Creating…" : "New note"}
+            </button>
+          </div>
+        ) : null}
+        {renderEditor()}
+      </main>
       {toast ? (
         <div
           className={`pointer-events-none fixed right-4 bottom-4 z-50 rounded-md px-4 py-2 text-sm shadow-lg ${
