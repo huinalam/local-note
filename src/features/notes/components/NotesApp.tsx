@@ -4,7 +4,14 @@ import "easymde/dist/easymde.min.css";
 
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import {
   createNote,
@@ -14,6 +21,7 @@ import {
   updateNote,
   type NoteRecord,
 } from "~/lib/db/notes";
+import { getSetting, setSetting } from "~/lib/settings";
 
 const SimpleMDE = dynamic(() => import("react-simplemde-editor"), {
   ssr: false,
@@ -58,6 +66,7 @@ export function NotesApp({ activeNoteId }: NotesAppProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarInitialized, setIsSidebarInitialized] = useState(false);
 
   const activeIdRef = useRef<string | undefined>(activeNoteId);
   const notesRef = useRef<NoteRecord[]>([]);
@@ -208,6 +217,21 @@ export function NotesApp({ activeNoteId }: NotesAppProps) {
   useEffect(() => {
     activeIdRef.current = activeNoteId;
   }, [activeNoteId]);
+
+  useLayoutEffect(() => {
+    const storedValue = getSetting("sidebarCollapsed");
+    if (storedValue !== null) {
+      setIsSidebarCollapsed(storedValue);
+    }
+    setIsSidebarInitialized(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isSidebarInitialized) {
+      return;
+    }
+    setSetting("sidebarCollapsed", isSidebarCollapsed);
+  }, [isSidebarCollapsed, isSidebarInitialized]);
 
   useEffect(() => {
     if (!loading && notes.length > 0 && activeNoteId && !activeNote) {
@@ -400,7 +424,7 @@ export function NotesApp({ activeNoteId }: NotesAppProps) {
           type="button"
           onClick={handleShowSidebar}
           aria-label="Show notes menu"
-          className="absolute left-0 top-1/2 hidden h-24 w-10 -translate-y-1/2 -translate-x-[calc(100%-0.75rem)] items-center justify-center rounded-r-md border border-slate-800 bg-slate-900/80 shadow transition hover:border-sky-400 hover:text-sky-100 md:flex"
+          className="absolute top-1/2 left-0 hidden h-24 w-10 -translate-x-[calc(100%-0.75rem)] -translate-y-1/2 items-center justify-center rounded-r-md border border-slate-800 bg-slate-900/80 shadow transition hover:border-sky-400 hover:text-sky-100 md:flex"
         >
           <svg
             className="h-5 w-5 text-slate-200"
