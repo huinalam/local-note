@@ -400,7 +400,7 @@ export function NotesApp({ activeNoteId }: NotesAppProps) {
           type="button"
           onClick={handleShowSidebar}
           aria-label="Show notes menu"
-          className="absolute left-0 top-1/2 hidden h-24 w-10 -translate-y-1/2 -translate-x-1/2 items-center justify-center rounded-r-md border border-slate-800 bg-slate-900/80 shadow transition hover:border-sky-400 hover:text-sky-100 md:flex"
+          className="absolute left-0 top-1/2 hidden h-24 w-10 -translate-y-1/2 -translate-x-[calc(100%-0.75rem)] items-center justify-center rounded-r-md border border-slate-800 bg-slate-900/80 shadow transition hover:border-sky-400 hover:text-sky-100 md:flex"
         >
           <svg
             className="h-5 w-5 text-slate-200"
@@ -496,11 +496,7 @@ export function NotesApp({ activeNoteId }: NotesAppProps) {
           </div>
         </aside>
       )}
-      <main
-        className={`flex flex-1 flex-col ${
-          isSidebarCollapsed ? "md:pl-12" : ""
-        }`}
-      >
+      <main className="flex flex-1 flex-col">
         {isSidebarCollapsed ? (
           <div className="flex items-center justify-between gap-3 border-b border-slate-900/80 bg-slate-900/70 px-4 py-3 md:hidden">
             <button
