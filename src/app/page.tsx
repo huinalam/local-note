@@ -1,31 +1,5 @@
+import { NotesApp } from '~/features/notes/components/NotesApp';
+
 export default function HomePage() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c] text-white">
-      <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16">
-        <h1 className="text-5xl font-extrabold tracking-tight text-white sm:text-[5rem]">
-          local<span className="text-[hsl(280,100%,70%)]">-note</span>
-        </h1>
-        <p className="max-w-xl text-center text-lg text-white/90">
-          Capture quick ideas, todos, and memos that stay local to your browser.
-          IndexedDB keeps everything available offline—no accounts required.
-        </p>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-8">
-          <div className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 text-white">
-            <h3 className="text-2xl font-bold">Start writing</h3>
-            <div className="text-lg">
-              Add your first memo and we will store it locally so it is ready
-              whenever you return.
-            </div>
-          </div>
-          <div className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 text-white">
-            <h3 className="text-2xl font-bold">Stay in control</h3>
-            <div className="text-lg">
-              Notes never leave the device. Local-first storage keeps sensitive
-              ideas private and available offline.
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
-  );
+  return <NotesApp />;
 }
