@@ -19,8 +19,10 @@
   },
   "dependencies": {
     "@t3-oss/env-nextjs": "^0.12.0",
+    "@monaco-editor/react": "^4.6.0",
     "easymde": "2",
     "idb": "8",
+    "monaco-editor": "^0.51.0",
     "next": "^15.2.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

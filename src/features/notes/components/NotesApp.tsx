@@ -13,24 +13,37 @@ import {
   useState,
 } from "react";
 
+import type { EditorProps } from "@monaco-editor/react";
+
 import {
   createNote,
   deleteNote,
   listNotes,
   seedWelcomeNote,
   updateNote,
+  type NoteEditorType,
   type NoteRecord,
 } from "~/lib/db/notes";
 import { getSetting, setSetting } from "~/lib/settings";
 
-const SimpleMDE = dynamic(() => import("react-simplemde-editor"), {
+const EditorLoading = () => (
+  <div className="rounded-md border border-slate-700 bg-slate-900 p-4 text-sm text-slate-300">
+    Loading editor…
+  </div>
+);
+
+const SimpleMDEEditor = dynamic(() => import("react-simplemde-editor"), {
   ssr: false,
-  loading: () => (
-    <div className="rounded-md border border-slate-700 bg-slate-900 p-4 text-sm text-slate-300">
-      Loading editor…
-    </div>
-  ),
+  loading: () => <EditorLoading />,
 });
+
+const MonacoEditor = dynamic<EditorProps>(
+  () => import("@monaco-editor/react").then((mod) => mod.default),
+  {
+    ssr: false,
+    loading: () => <EditorLoading />,
+  },
+);
 
 const sortNotes = (notes: NoteRecord[]) =>
   [...notes].sort(
@@ -59,6 +72,7 @@ export function NotesApp({ activeNoteId }: NotesAppProps) {
   const [loading, setLoading] = useState(true);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftContent, setDraftContent] = useState("");
+  const [draftEditorType, setDraftEditorType] = useState<NoteEditorType>("simplemde");
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [hasPendingSave, setHasPendingSave] = useState(false);
@@ -70,7 +84,11 @@ export function NotesApp({ activeNoteId }: NotesAppProps) {
 
   const activeIdRef = useRef<string | undefined>(activeNoteId);
   const notesRef = useRef<NoteRecord[]>([]);
-  const draftRef = useRef({ title: "", content: "" });
+  const draftRef = useRef({
+    title: "",
+    content: "",
+    editorType: "simplemde" as NoteEditorType,
+  });
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -142,12 +160,20 @@ export function NotesApp({ activeNoteId }: NotesAppProps) {
     const nextTitle = draftRef.current.title.trim() || "Untitled note";
     const nextContent = draftRef.current.content;
 
-    const payload: { title?: string; content?: string } = {};
+    const payload: {
+      title?: string;
+      content?: string;
+      editorType?: NoteEditorType;
+    } = {};
     if (nextTitle !== existing.title) {
       payload.title = nextTitle;
     }
     if (nextContent !== existing.content) {
       payload.content = nextContent;
+    }
+    const nextEditorType = draftRef.current.editorType;
+    if (nextEditorType !== existing.editorType) {
+      payload.editorType = nextEditorType;
     }
 
     if (Object.keys(payload).length === 0) {
@@ -252,9 +278,11 @@ export function NotesApp({ activeNoteId }: NotesAppProps) {
     }
     setDraftTitle(activeNote.title);
     setDraftContent(activeNote.content);
+    setDraftEditorType(activeNote.editorType);
     draftRef.current = {
       title: activeNote.title,
       content: activeNote.content,
+      editorType: activeNote.editorType,
     };
     setLastSavedAt(activeNote.updatedAt);
   }, [activeNote]);
@@ -285,6 +313,18 @@ export function NotesApp({ activeNoteId }: NotesAppProps) {
     draftRef.current = {
       ...draftRef.current,
       content: value,
+    };
+    scheduleSave();
+  };
+
+  const handleEditorTypeChange = (value: NoteEditorType) => {
+    if (value === draftEditorType) {
+      return;
+    }
+    setDraftEditorType(value);
+    draftRef.current = {
+      ...draftRef.current,
+      editorType: value,
     };
     scheduleSave();
   };
@@ -338,7 +378,12 @@ export function NotesApp({ activeNoteId }: NotesAppProps) {
       } else {
         setDraftTitle("");
         setDraftContent("");
-        draftRef.current = { title: "", content: "" };
+        setDraftEditorType("simplemde");
+        draftRef.current = {
+          title: "",
+          content: "",
+          editorType: "simplemde",
+        };
         setLastSavedAt(null);
       }
     } catch (error) {
@@ -395,7 +440,7 @@ export function NotesApp({ activeNoteId }: NotesAppProps) {
             Delete
           </button>
         </div>
-        <div className="flex items-center gap-3 text-xs text-slate-400">
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
           <span>
             {isSaving
               ? "Saving…"
@@ -405,13 +450,57 @@ export function NotesApp({ activeNoteId }: NotesAppProps) {
                   ? `Saved ${formatTimestamp(lastSavedAt)}`
                   : ""}
           </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+              Editor
+            </span>
+            <div className="inline-flex overflow-hidden rounded-md border border-slate-700">
+              <button
+                type="button"
+                onClick={() => handleEditorTypeChange("simplemde")}
+                disabled={isSaving}
+                aria-pressed={draftEditorType === "simplemde"}
+                className={`px-3 py-1 text-xs font-medium transition focus:outline-none ${draftEditorType === "simplemde" ? "bg-sky-600 text-white" : "bg-transparent text-slate-300 hover:bg-slate-800/60"} ${isSaving ? "cursor-not-allowed opacity-60" : ""}`}
+              >
+                Markdown
+              </button>
+              <button
+                type="button"
+                onClick={() => handleEditorTypeChange("monaco")}
+                disabled={isSaving}
+                aria-pressed={draftEditorType === "monaco"}
+                className={`px-3 py-1 text-xs font-medium transition focus:outline-none ${draftEditorType === "monaco" ? "bg-sky-600 text-white" : "bg-transparent text-slate-300 hover:bg-slate-800/60"} ${isSaving ? "cursor-not-allowed opacity-60" : ""}`}
+              >
+                Monaco
+              </button>
+            </div>
+          </div>
         </div>
         <div className="flex-1 overflow-hidden rounded-lg border border-slate-800 bg-slate-900">
-          <SimpleMDE
-            value={draftContent}
-            onChange={handleContentChange}
-            options={editorOptions}
-          />
+          {draftEditorType === "monaco" ? (
+            <MonacoEditor
+              key="monaco"
+              value={draftContent}
+              onChange={(value) => handleContentChange(value ?? "")}
+              language="markdown"
+              theme="vs-dark"
+              height="100%"
+              options={{
+                minimap: { enabled: false },
+                wordWrap: "on",
+                fontSize: 14,
+                renderWhitespace: "selection",
+              }}
+              className="h-full"
+            />
+          ) : (
+            <SimpleMDEEditor
+              key="simplemde"
+              value={draftContent}
+              onChange={handleContentChange}
+              options={editorOptions}
+            />
+          )}
         </div>
       </div>
     );

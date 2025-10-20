@@ -1,11 +1,14 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 
+export type NoteEditorType = "simplemde" | "monaco";
+
 export interface NoteRecord {
   id: string;
   title: string;
   content: string;
   createdAt: string;
   updatedAt: string;
+  editorType: NoteEditorType;
 }
 
 interface NotesDbSchema extends DBSchema {
@@ -40,7 +43,7 @@ export class NoteNotFoundError extends NotesDbError {
 }
 
 const DB_NAME = "local-note";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = "notes" as const;
 const UPDATED_AT_INDEX = "by-updatedAt" as const;
 
@@ -56,12 +59,28 @@ const getDb = () => {
   ensureIndexedDbAvailable();
 
   dbPromise ??= openDB<NotesDbSchema>(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        const store = db.createObjectStore(STORE_NAME, {
-          keyPath: "id",
-        });
+    async upgrade(db, oldVersion, _newVersion, transaction) {
+      const store =
+        oldVersion < 1 || !db.objectStoreNames.contains(STORE_NAME)
+          ? db.createObjectStore(STORE_NAME, {
+              keyPath: "id",
+            })
+          : transaction.objectStore(STORE_NAME);
+
+      if (!store.indexNames.contains(UPDATED_AT_INDEX)) {
         store.createIndex(UPDATED_AT_INDEX, "updatedAt");
+      }
+
+      if (oldVersion < 2) {
+        let cursor = await store.openCursor();
+        while (cursor) {
+          const value = cursor.value;
+          if (!("editorType" in value) || !value.editorType) {
+            value.editorType = "simplemde";
+            await cursor.update(value);
+          }
+          cursor = await cursor.continue();
+        }
       }
     },
   });
@@ -95,6 +114,7 @@ const createId = () => {
 export type CreateNoteInput = {
   title?: string;
   content?: string;
+  editorType?: NoteEditorType;
 };
 
 export const createNote = async (input: CreateNoteInput = {}): Promise<NoteRecord> => {
@@ -105,6 +125,7 @@ export const createNote = async (input: CreateNoteInput = {}): Promise<NoteRecor
     content: input.content ?? "",
     createdAt: now,
     updatedAt: now,
+    editorType: input.editorType ?? "simplemde",
   };
 
   await withDb((db) => db.add(STORE_NAME, record));
@@ -140,6 +161,7 @@ export const listNotes = async (): Promise<NoteRecord[]> => {
 export type UpdateNoteInput = {
   title?: string;
   content?: string;
+  editorType?: NoteEditorType;
 };
 
 export const updateNote = async (id: string, input: UpdateNoteInput): Promise<NoteRecord> => {
@@ -156,6 +178,7 @@ export const updateNote = async (id: string, input: UpdateNoteInput): Promise<No
       ...existing,
       title: input.title?.trim() ?? existing.title,
       content: input.content ?? existing.content,
+      editorType: input.editorType ?? existing.editorType,
       updatedAt: createTimestamp(),
     };
 
