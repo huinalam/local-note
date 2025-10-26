@@ -88,7 +88,9 @@ const getDb = () => {
   return dbPromise;
 };
 
-const withDb = async <T>(fn: (db: IDBPDatabase<NotesDbSchema>) => Promise<T>) => {
+const withDb = async <T>(
+  fn: (db: IDBPDatabase<NotesDbSchema>) => Promise<T>,
+) => {
   try {
     const db = await getDb();
     return await fn(db);
@@ -117,7 +119,9 @@ export type CreateNoteInput = {
   editorType?: NoteEditorType;
 };
 
-export const createNote = async (input: CreateNoteInput = {}): Promise<NoteRecord> => {
+export const createNote = async (
+  input: CreateNoteInput = {},
+): Promise<NoteRecord> => {
   const now = createTimestamp();
   const record: NoteRecord = {
     id: createId(),
@@ -125,7 +129,7 @@ export const createNote = async (input: CreateNoteInput = {}): Promise<NoteRecor
     content: input.content ?? "",
     createdAt: now,
     updatedAt: now,
-    editorType: input.editorType ?? "simplemde",
+    editorType: input.editorType ?? "monaco",
   };
 
   await withDb((db) => db.add(STORE_NAME, record));
@@ -164,7 +168,10 @@ export type UpdateNoteInput = {
   editorType?: NoteEditorType;
 };
 
-export const updateNote = async (id: string, input: UpdateNoteInput): Promise<NoteRecord> => {
+export const updateNote = async (
+  id: string,
+  input: UpdateNoteInput,
+): Promise<NoteRecord> => {
   return withDb(async (db) => {
     const tx = db.transaction(STORE_NAME, "readwrite");
     const store = tx.store;

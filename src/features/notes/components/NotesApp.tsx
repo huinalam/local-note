@@ -72,7 +72,8 @@ export function NotesApp({ activeNoteId }: NotesAppProps) {
   const [loading, setLoading] = useState(true);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftContent, setDraftContent] = useState("");
-  const [draftEditorType, setDraftEditorType] = useState<NoteEditorType>("simplemde");
+  const [draftEditorType, setDraftEditorType] =
+    useState<NoteEditorType>("monaco");
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [hasPendingSave, setHasPendingSave] = useState(false);
@@ -87,7 +88,7 @@ export function NotesApp({ activeNoteId }: NotesAppProps) {
   const draftRef = useRef({
     title: "",
     content: "",
-    editorType: "simplemde" as NoteEditorType,
+    editorType: "monaco" as NoteEditorType,
   });
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -378,11 +379,11 @@ export function NotesApp({ activeNoteId }: NotesAppProps) {
       } else {
         setDraftTitle("");
         setDraftContent("");
-        setDraftEditorType("simplemde");
+        setDraftEditorType("monaco");
         draftRef.current = {
           title: "",
           content: "",
-          editorType: "simplemde",
+          editorType: "monaco",
         };
         setLastSavedAt(null);
       }
@@ -434,6 +435,14 @@ export function NotesApp({ activeNoteId }: NotesAppProps) {
           />
           <button
             type="button"
+            onClick={handleCreateNote}
+            disabled={isCreating}
+            className="rounded-md bg-sky-500 px-3 py-2 text-sm font-medium text-white shadow transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:bg-slate-600"
+          >
+            {isCreating ? "Creating…" : "New"}
+          </button>
+          <button
+            type="button"
             onClick={handleDeleteNote}
             className="rounded-md border border-red-500/60 px-3 py-2 text-sm font-medium text-red-200 transition hover:border-red-400 hover:text-red-100"
           >
@@ -451,7 +460,7 @@ export function NotesApp({ activeNoteId }: NotesAppProps) {
                   : ""}
           </span>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            <span className="text-[10px] font-semibold tracking-wide text-slate-500 uppercase">
               Editor
             </span>
             <div className="inline-flex overflow-hidden rounded-md border border-slate-700">
