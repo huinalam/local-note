@@ -59,6 +59,7 @@ const getDb = () => {
   ensureIndexedDbAvailable();
 
   dbPromise ??= openDB<NotesDbSchema>(DB_NAME, DB_VERSION, {
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     async upgrade(db, oldVersion, _newVersion, transaction) {
       const store =
         oldVersion < 1 || !db.objectStoreNames.contains(STORE_NAME)
